@@ -4,6 +4,7 @@ import {
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import ScreenLayout from "../components/ScreenLayout";
 import styled from "styled-components/native";
@@ -13,7 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import Separator from "../components/Separator";
 import { colors } from "../colors";
 import ActionSheet from "react-native-actionsheet";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import CommentForm from "../components/post/CommentForm";
+import { shouldInclude } from "@apollo/client/utilities";
 
 const POST_DETAIL_QUERY = gql`
   query seeUserPost($userPostId: Int!) {
@@ -54,6 +56,14 @@ const TOGGLE_USERPOST_LIKE_MUTATION = gql`
     }
   }
 `;
+
+const PostView = styled.View`
+  flex: 7;
+`;
+
+// const CommentView = styled.View`
+//   flex: 4;
+// `;
 
 const Container = styled.View`
   margin: 10px;
@@ -112,17 +122,6 @@ const NoComment = styled.Text`
   margin: auto;
   font-size: 14px;
   color: ${colors.greyText};
-`;
-
-const CommentInput = styled.TextInput`
-  position: absolute;
-  top: 500px;
-  width: 80%;
-  background-color: white;
-  padding: 15px 7px;
-  border-radius: 4px;
-  color: black;
-  border: 1px solid red;
 `;
 
 export default function UserPostListDetail({ route: { params } }) {
@@ -204,77 +203,87 @@ export default function UserPostListDetail({ route: { params } }) {
 
   return (
     <ScreenLayout loading={loading}>
-      <KeyboardAwareScrollView showsVerticalScrollIndicator={false}>
-        <KeyboardAvoidingView behavior="padding">
-          <CommentInput />
-        </KeyboardAvoidingView>
-        {data?.seeUserPost?.file.length !== 0 ? (
-          <ImageSlider data={data} />
-        ) : null}
-        <Container>
-          <Header>
-            <UserAvatar username={params.username} uri={params.avatar} />
-          </Header>
-          <Separator />
-          <Contents>
-            <Title>{data?.seeUserPost?.title}</Title>
-            <Content>{data?.seeUserPost?.content}</Content>
-          </Contents>
-          <Actions>
-            {likeLoading ? (
-              <ActivityIndicator color="black" />
-            ) : (
-              <Action onPress={toggleUserPostLike}>
-                <Ionicons
-                  name={data?.seeUserPost?.isLiked ? "heart" : "heart-outline"}
-                  color={data?.seeUserPost?.isLiked ? "tomato" : "black"}
-                  size={22}
-                />
-              </Action>
-            )}
-          </Actions>
-          <Separator />
-          <Comments>
-            {data?.seeUserPost?.userPostComments[0] ? (
-              data.seeUserPost.userPostComments.map((item, index) => {
-                return (
-                  <CommentContainer key={index}>
-                    <UserAvatar
-                      username={item.user.username}
-                      uri={item.user.avatar}
-                    />
-                    <Comment key={index}>
-                      <CommentPayLoad>{item.payload}</CommentPayLoad>
-                      {item.isMine ? (
-                        <IconView onPress={showActionSheet}>
-                          <Ionicons
-                            name="ellipsis-vertical"
-                            color="grey"
-                            size={14}
-                          />
-                        </IconView>
-                      ) : null}
-                    </Comment>
-                  </CommentContainer>
-                );
-              })
-            ) : (
-              <NoCommentView>
-                <NoComment>
-                  There is no comment. Please write a comment.
-                </NoComment>
-              </NoCommentView>
-            )}
-          </Comments>
-        </Container>
-        <ActionSheet
-          ref={actionsheet}
-          options={optionArray}
-          cancelButtonIndex={2}
-          destructiveButtonIndex={1}
-          onPress={(index) => handleIndex(index)}
-        />
-      </KeyboardAwareScrollView>
+      <PostView>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {data?.seeUserPost?.file.length !== 0 ? (
+            <ImageSlider data={data} />
+          ) : null}
+          <Container>
+            <Header>
+              <UserAvatar username={params.username} uri={params.avatar} />
+            </Header>
+            <Separator />
+            <Contents>
+              <Title>{data?.seeUserPost?.title}</Title>
+              <Content>{data?.seeUserPost?.content}</Content>
+            </Contents>
+            <Actions>
+              {likeLoading ? (
+                <ActivityIndicator color="black" />
+              ) : (
+                <Action onPress={toggleUserPostLike}>
+                  <Ionicons
+                    name={
+                      data?.seeUserPost?.isLiked ? "heart" : "heart-outline"
+                    }
+                    color={data?.seeUserPost?.isLiked ? "tomato" : "black"}
+                    size={22}
+                  />
+                </Action>
+              )}
+            </Actions>
+            <Separator />
+            <Comments>
+              {data?.seeUserPost?.userPostComments[0] ? (
+                data.seeUserPost.userPostComments.map((item, index) => {
+                  return (
+                    <CommentContainer key={index}>
+                      <UserAvatar
+                        username={item.user.username}
+                        uri={item.user.avatar}
+                      />
+                      <Comment key={index}>
+                        <CommentPayLoad>{item.payload}</CommentPayLoad>
+                        {item.isMine ? (
+                          <IconView onPress={showActionSheet}>
+                            <Ionicons
+                              name="ellipsis-vertical"
+                              color="grey"
+                              size={14}
+                            />
+                          </IconView>
+                        ) : null}
+                      </Comment>
+                    </CommentContainer>
+                  );
+                })
+              ) : (
+                <NoCommentView>
+                  <NoComment>
+                    There is no comment. Please write a comment.
+                  </NoComment>
+                </NoCommentView>
+              )}
+            </Comments>
+          </Container>
+          <ActionSheet
+            ref={actionsheet}
+            options={optionArray}
+            cancelButtonIndex={2}
+            destructiveButtonIndex={1}
+            onPress={(index) => handleIndex(index)}
+          />
+        </ScrollView>
+      </PostView>
+      <KeyboardAvoidingView
+        style={{
+          flex: 1,
+        }}
+        behavior="position"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 50 : 0}
+      >
+        <CommentForm userPostId={parseInt(params.id)} />
+      </KeyboardAvoidingView>
     </ScreenLayout>
   );
 }
